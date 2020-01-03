@@ -1,3 +1,4 @@
+
 import asyncio
 import logging
 import aiomysql
@@ -115,13 +116,12 @@ class ModelMetaclass(type):
                 mappings[k] = v
                 if v.primary_key:
                     if primaryKey:
-                        raise StandarError(
-                            'Duplicate primary key for field: %s' % k)
+                        raise Exception('Duplicate primary key for field: %s' % k)
                     primaryKey = k
                 else:
                     fields.append(k)
         if not primaryKey:
-            raise StandardError('Primary key not found')
+            raise Exception('Primary key not found')
         for k in mappings.keys():
             attrs.pop(k)
         escaped_fields = list(map(lambda f: '%s' % f, fields))
@@ -184,9 +184,9 @@ class Model(dict, metaclass=ModelMetaclass):
         limit = kw.get('limit', None)
         if limit is not None:
             sql.append('limit')
-            if isinstance(limit, int)
-            sql.append('?')
-            args.append(limit)
+            if isinstance(limit, int):
+                sql.append('?')
+                args.append(limit)
             elif isinstance(limit, tuple) and len(limit) == 2:
                 sql.append('?, ?')
                 args.extend(limit)
@@ -211,7 +211,7 @@ class Model(dict, metaclass=ModelMetaclass):
     async def find(cls, pk):
         'find object by primary key'
         rs = await select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)
-        if len(s) == 0:
+        if len(rs) == 0:
             return None
         return cls(**rs[0])
 
@@ -220,19 +220,19 @@ class Model(dict, metaclass=ModelMetaclass):
         args.append(self.getValueOrDefault(self.__primary_key__))
         rows = await execute(self.__insert__, args)
         if rows != 1:
-            logging.warn('failed to insert record: affected rows: %s' % rows)
+            logging.warning('failed to insert record: affected rows: %s' % rows)
 
     async def update(self):
         args = list(map(self.getValue, self.__fields__))
         args.append(self.getValue(self.__primary_key__))
         rows = await execute(self.__update__, args)
-        if row != 1:
-            logging.warn(
+        if rows != 1:
+            logging.warning(
                 'faid to update by primary key: affected rows: %s' % rows)
 
     async def remove(self):
         args = [self.getValue(self.__primary_key__)]
         rows = await execute(self.__delete__, args)
-        if row != 1:
-            logging.warn(
+        if rows != 1:
+            logging.warning(
                 'failed to remove by primary key: affected rows: %s' % rows)
